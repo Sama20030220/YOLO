@@ -1,0 +1,79 @@
+<!-- templates/register.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>注册新用户</title>
+    <style>
+        body {
+            background-color: #FFA500; /* 橘黄色背景 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .form-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        input[type="submit"],
+        button {
+            background-color: #FF6347; /* 橙红色按钮 */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        input[type="submit"]:hover,
+        button:hover {
+            background-color: #FF4500; /* 鼠标悬停时更深的橙色 */
+        }
+
+        p.error {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>注册新用户</h1>
+        {% if error %}
+        <p class="error">{{ error }}</p>
+        {% endif %}
+        <form action="{{ url_for('register') }}" method="post">
+            <label for="username">用户名:</label>
+            <input type="text" id="username" name="username" required>
+            <label for="password">密码:</label>
+            <input type="password" id="password" name="password" required>
+            <!-- 可以添加更多的表单字段，例如确认密码、邮箱等 -->
+            <input type="submit" value="注册">
+        </form>
+        <p>已有账号？<a href="{{ url_for('login') }}">登录</a></p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!-- templates/login.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #FFA500; /* 橘黄色背景 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .form-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        input[type="submit"] {
+            background-color: #FF6347; /* 橙红色按钮 */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #FF4500; /* 鼠标悬停时更深的橙色 */
+        }
+
+        p.error {
+            color: red;
+            margin-top: 10px;
+        }
+
+        .chart-container {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        width: 300px;
+        height: 200px;
+        background-color: white; /* 设置白色背景 */
+        border-radius: 10px; /* 圆角边框 */
+        padding: 10px; /* 内边距 */
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* 添加阴影以提升视觉效果 */
+        }
+
+        /* 调整画布以适应容器 */
+        .chart-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        .airplane-container {
+            position: absolute;
+            top: 50px; /* 设置飞机位置 */
+            left: 50px;
+            width: 100px; /* 设置容器大小 */
+            height: 100px;
+            overflow: hidden; /* 隐藏超出容器的部分 */
+        }
+
+        .airplane {
+            width: 100%; /* 使图片适应容器 */
+            height: 100%;
+        }
+
+        .animation {
+            animation: fly 5s linear infinite;
+        }
+
+        @keyframes fly {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(100vw); }
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>用户登录</h1>
+        {% if error %}
+        <p class="error">{{ error }}</p>
+        {% endif %}
+        <form action="{{ url_for('login') }}" method="post">
+            <label for="username">用户名:</label>
+            <input type="text" id="username" name="username" required>
+            <label for="password">密码:</label>
+            <input type="password" id="password" name="password" required>
+            <input type="submit" value="登录">
+        </form>
+        <p>没有账号？<a href="{{ url_for('register') }}">注册</a></p>
+    </div>
+    <!-- 添加卡通飞机的SVG图像 -->
+    <div class="airplane-container animation">
+        <img src="{{ url_for('static', filename='plane.svg') }}" class="airplane" alt="Airplane">
+    </div>
+    <div class="chart-container">
+        <canvas id="recognitionChart"></canvas>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/api/detection-counts')
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('recognitionChart').getContext('2d');
+                const chartData = {
+                    labels: data.map(item => item.time),
+                    datasets: [{
+                        label: '图像识别次数',
+                        data: data.map(item => item.count),
+                        fill: false,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                };
+                const chartConfig = {
+                    type: 'line',
+                    data: chartData,
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false // 可选：隐藏图例
+                            }
+                        }
+                    }
+                };
+                new Chart(ctx, chartConfig);
+            })
+            .catch(error => console.error('Error fetching data:', error));
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>欢迎来到智能教室学生状态监控页面</title>
+    <style>        body {
+            background-color: #F5F5DC;
+            color: #333333;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+        .history-sidebar {
+            width: 20%;
+            background-color: #D3D3D3;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .main-content {
+            width: 80%;
+            background-color: #FFFACD;
+            padding: 20px;
+            box-sizing: border-box;
+            min-height: 100vh;
+            overflow-y: auto;
+            margin-left: 20%;
+        }
+        .centered-elements {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+        }
+        .button-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        h1 {
+            color: #FF6347;
+            margin-top: 50px;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            margin: 20px 0;
+        }
+        .result {
+            color: #00BFFF;
+            font-size: 1.5em;
+            margin-top: 20px;
+        }
+        .custom-file-input {
+            position: absolute;
+            z-index: -1;
+            opacity: 0;
+        }
+        .custom-button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .custom-button:hover {
+            background-color: #45a049;
+        }
+        .top-right-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        .usage-stats {
+            position: absolute;
+            top: 120px; /* 调整这个值来改变其与顶部的距离 */
+            right: 20px; /* 与右边缘的距离 */
+            width: 150px; /* 宽度 */
+            height: 100px; /* 高度 */
+            background-color: #FFFACD; /* 背景颜色，与.main-content相同 */
+            border: 1px solid #D3D3D3; /* 边框，与.main-content和.history-sidebar相同 */
+            padding: 10px; /* 内边距 */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* 文本垂直居中 */
+            align-items: center;
+            font-family: Arial, sans-serif; /* 字体，与body相同 */
+            color: #333333; /* 文本颜色，与body相同 */
+        }
+    </style>
+</head>
+<body>
+    <div class="history-sidebar">
+    <h2>历史记录</h2>
+    <ul id="historyList"></ul>
+</div>
+
+<script>document.addEventListener('DOMContentLoaded', async () => {
+    const historyList = document.getElementById('historyList');
+
+    // 清除列表中的旧内容
+    historyList.innerHTML = '';
+
+    try {
+        const response = await fetch('/history');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const histories = await response.json();
+
+        histories.forEach(history => {
+            const listItem = document.createElement('li');
+            listItem.innerHTML = `                <span>${history.timestamp}</span>
+                <img src="${history.image_path}" alt="识别的图片">
+                <p>预测结果:</p>
+                <ul>
+                    ${Object.entries(history.prediction_result)
+                        .map(([key, value]) => {
+                            const chineseLabel = {
+                                'play_phone': '玩手机',
+                                'sleep': '睡觉',
+                                'study': '学习',
+                                'talk': '说话',
+                                'watch': '走神'
+                            }[key];
+                            return `<li>${chineseLabel}: ${value}人</li>`;
+                        })
+                        .join('')}                </ul>
+            `;
+            historyList.appendChild(listItem);
+        });
+    } catch (error) {
+        console.error('Error fetching history:', error);
+    }
+});
+</script>
+    <div class="main-content">
+        <div class="centered-elements">
+            <h1>欢迎来到智能教室学生状态监控页面</h1>
+            <div class="button-row">
+                <label for="fileInput" class="custom-button">选择文件</label>
+                <button class="custom-button" onclick="uploadImage()">上传图片</button>
+            </div>
+            <div id="imageContainer"></div>
+            <button class="custom-button" onclick="analyzeImage()" disabled id="analyzeButton">开始分析</button>
+            <div id="result" class="result"></div>
+        </div>
+        <button class="custom-button top-right-button" onclick="location.href='/logout';">登出</button>
+        <input type="file" id="fileInput" style="display: none;">
+    </div>
+    <div id="usageStats" class="usage-stats"></div>
+    <script>
+        function uploadImage() {
+            const input = document.getElementById('fileInput');
+            const file = input.files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('imageContainer').innerHTML = `<img src="${e.target.result}" alt="Uploaded Image">`;
+                document.getElementById('analyzeButton').disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function analyzeImage() {
+            const formData = new FormData();
+            const input = document.getElementById('fileInput');
+            formData.append('file', input.files[0]);
+            const response = await fetch('/predict', {
+                method: 'POST',
+                body: formData
+            });
+             const data = await response.json();
+
+            if ('message' in data) {
+                document.getElementById('result').innerText = data.message;
+            } else if ('annotatedImage' in data) {
+                // 将Base64编码的图像数据转换为Blob URL
+                const blob = await fetch(`data:image/jpeg;base64,${data.annotatedImage}`).then(res => res.blob());
+                const imageUrl = URL.createObjectURL(blob);
+                document.getElementById('imageContainer').innerHTML = `<img src="${imageUrl}" alt="Annotated Image">`;
+                document.getElementById('result').innerText = ""; // 清空结果区域
+            } else {
+                // 处理predictions并显示结果
+                let resultText = "预测结果:\n";
+                for (const prediction of data. Predictions) {
+                    resultText += `类别: ${prediction.class_id}, 置信度: ${prediction.confidence.toFixed(2)}, BBox: [${prediction.bbox}] \n`;
+                }
+                document.getElementById('result').innerText = resultText;
+            }
+        }
+        async function getUsageStats() {
+            const response = await fetch('/get_usage_stats', {
+                method: 'GET'
+            });
+            const data = await response.json();
+            document.getElementById('usageStats').innerText = `总检测次数: ${data.total_forecasts}`;
+        }
+        window.addEventListener('load', getUsageStats);
+    </script>
+</body>
+</html>

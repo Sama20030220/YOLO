@@ -1,0 +1,5 @@
+talk
+study
+watch
+sleep
+play_phone
