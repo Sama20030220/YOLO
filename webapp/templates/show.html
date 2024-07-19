@@ -169,8 +169,8 @@
                             type: 'line',
                             data: chartData,
                             options: {
-                                responsive: true, // 允许图表响应式布局
-                                maintainAspectRatio: false, // 不保持原始宽高比，允许自由拉伸以填满容器
+                                responsive: true,
+                                maintainAspectRatio: false,
                                 scales: {
                                     y: {
                                         beginAtZero: true
@@ -179,6 +179,30 @@
                                 plugins: {
                                     legend: {
                                         display: true
+                                    },
+                                    tooltip: {
+                                        enabled: false // 禁用默认的tooltip，因为我们自定义了交互逻辑
+                                    },
+                                    custom: {
+                                        id: 'customHover',
+                                        afterEvent: function(chart, args) {
+                                            if (args.event.type !== 'mousemove' && args.event.type !== 'mouseout') {
+                                                return;
+                                            }
+
+                                            if (chart.tooltip._active && chart.tooltip._active.length) {
+                                                const activePoint = chart.tooltip._active[0];
+                                                chart.data.datasets.forEach(dataset => {
+                                                    dataset.hidden = dataset.label !== activePoint.dataset.label;
+                                                });
+                                                chart.update();
+                                            } else {
+                                                chart.data.datasets.forEach(dataset => {
+                                                    delete dataset.hidden;
+                                                });
+                                                chart.update();
+                                            }
+                                        }
                                     }
                                 }
                             }
