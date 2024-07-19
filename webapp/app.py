@@ -5,13 +5,14 @@ import numpy as np
 import torch
 import os
 import bcrypt
+from sqlalchemy import create_engine, MetaData, Table, select, engine
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import aliased
 from torchvision import transforms
 from ultralytics import YOLO
 from PIL import Image
 from werkzeug.utils import secure_filename
-from flask import Flask, request, jsonify, render_template, url_for, redirect
+from flask import Flask, request, jsonify, render_template, url_for, redirect, abort, current_app
 from flask_login import LoginManager, UserMixin, login_required, logout_user, login_user, current_user
 from sqlalchemy import func
 
@@ -60,16 +61,17 @@ class Room(db.Model):
 # 数据库模型 - 预测表
 class Forecast(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    number = db.Column(db.String(10), nullable=False)  # 教室号
+    number = db.Column(db.String(10), nullable=False)  # 教室号d
     talk = db.Column(db.Integer, nullable=False)  # 聊天人数
     study = db.Column(db.Integer, nullable=False)  # 学习人数
     watch = db.Column(db.Integer, nullable=False)  # 观看视频人数
     sleep = db.Column(db.Integer, nullable=False)  # 睡觉人数
     phone = db.Column(db.Integer, nullable=False)  # 使用手机人数
     time = db.Column(db.DateTime, nullable=False)  # 记录时间
+    video = db.Column(db.Integer, nullable=False)  # 使用手机人数
 
     # 构造函数
-    def __init__(self, number, talk, study, watch, sleep, phone, time):
+    def __init__(self, number, talk, study, watch, sleep, phone, time, video):
         self.number = number
         self.talk = talk
         self.study = study
@@ -77,6 +79,7 @@ class Forecast(db.Model):
         self.sleep = sleep
         self.phone = phone
         self.time = time
+        self.video = video
 
 
 # 类别名称映射
@@ -181,7 +184,8 @@ def predict_image(image_path):
         watch=counts['watch'],
         sleep=counts['sleep'],
         phone=counts['play_phone'],
-        time=datetime.datetime.now()  # 使用当前时间
+        time=datetime.datetime.now(),  # 使用当前时间
+        video=0
     )
     # 将新记录添加到数据库会话
     db.session.add(new_forecast)
@@ -192,6 +196,104 @@ def predict_image(image_path):
     cv2.imwrite(output_img_path, img_cv)
     print(f"保存带有边界框和标签的图像到 {output_img_path}")
     return {'predictions': predictions, 'image_path': output_img_path}
+
+
+def predict_video(video_path):
+    max_video = db.session.query(func.max(Forecast.video)).scalar() or 0
+    new_video = max_video + 1
+    video_capture = cv2.VideoCapture(video_path)
+    frame_results = []
+
+    fps = video_capture.get(cv2.CAP_PROP_FPS)  # 获取视频的帧率
+    interval = 3  # 每三秒处理一次
+    frame_interval = int(fps * interval)  # 每三秒对应的帧数
+
+    frame_count = 0
+
+    while video_capture.isOpened():
+        ret, frame = video_capture.read()
+        if not ret:
+            break
+
+        if frame_count % frame_interval == 0:
+            img_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            results = model(img_pil)[0]
+            boxes = results.boxes
+
+            # 在原始图像上绘制检测到的边界框和标注类别
+            img_cv = frame.copy()
+            for box in boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                class_id = int(box.cls)
+                confidence = float(box.conf)
+                # 绘制边界框
+                cv2.rectangle(img_cv, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                # 标注类别标签和置信度
+                label = f"{class_names[class_id]} ({confidence:.2f})"
+                cv2.putText(img_cv, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                frame_results.append({
+                    'timestamp': video_capture.get(cv2.CAP_PROP_POS_MSEC),
+                    'class_id': class_id,
+                    'confidence': confidence,
+                    'bbox': [x1, y1, x2, y2],
+                })
+
+            # 计算各类别的人数
+            counts = {class_name: 0 for class_name in class_names.values()}
+            for box in boxes:
+                class_id = int(box.cls)
+                if class_id in class_names:
+                    counts[class_names[class_id]] += 1
+
+            # 创建一个新的Forecast记录
+            new_forecast = Forecast(
+                number=current_user.classroom,
+                talk=counts['talk'],
+                study=counts['study'],
+                watch=counts['watch'],
+                sleep=counts['sleep'],
+                phone=counts['play_phone'],
+                time=datetime.datetime.now(),  # 使用当前时间
+                video=new_video
+            )
+
+            # 将新记录添加到数据库会话
+            db.session.add(new_forecast)
+            db.session.commit()
+
+            # 保存带有边界框和标签的图像
+            save_image_with_counter(img_cv, new_forecast.id)
+
+        frame_count += 1
+
+    video_capture.release()
+    return frame_results
+
+
+@app.route('/predict_image', methods=['POST'])
+@login_required
+def handle_predict_image():
+    file = request.files['file']
+    if file and file.filename != '':
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        prediction_result = predict_image(file_path)
+        return jsonify(prediction_result)
+    return jsonify({'message': 'No file provided'})
+
+
+@app.route('/predict_video', methods=['POST'])
+@login_required
+def handle_predict_video():
+    file = request.files['file']
+    if file and file.filename != '':
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        frame_results = predict_video(file_path)
+        return jsonify({"frames": frame_results})
+    return jsonify({'message': 'No file provided'})
 
 
 @login_manager.user_loader
@@ -232,11 +334,64 @@ def register():
     return render_template('register.html')
 
 
+@app.route('/api/video-tags')
+def get_unique_video_tags():
+    try:
+        # 创建Forecast表的别名
+        forecast_alias = aliased(Forecast)
+        # 使用SQLAlchemy ORM方式创建查询，选择Forecast表中的video列，
+        # 并去除重复值，同时排除None和0
+        query = (
+            db.session.query(forecast_alias.video)
+            .filter(forecast_alias.video is not None)  # 排除None
+            .filter(forecast_alias.video != 0)  # 排除0
+            .distinct()
+        )
+        # 执行查询并获取结果
+        video_tags = [row[0] for row in query.all()]
+        return jsonify(video_tags)
+    except Exception as e:
+        current_app.logger.error(f"An error occurred: {e}")
+        return jsonify({"error": "An internal server error occurred"}), 500
+
+
+@app.route('/api/detection-counts', methods=['GET'])
+@login_required
+def get_detection_counts():
+    tag = request.args.get('tag')
+    if not tag or tag == '0':
+        return jsonify({'error': 'Invalid or missing tag parameter'}), 400
+
+    # 查询与当前用户关联且与给定tag匹配的所有预测记录
+    forecasts = Forecast.query.filter_by(number=current_user.classroom).filter(Forecast.video == tag).all()
+
+    # 将查询结果转换为列表，其中每个元素都是一个字典，包含时间戳和各类别计数
+    data = [
+        {
+            'time': forecast.time.isoformat(),
+            'talk': forecast.talk,
+            'study': forecast.study,
+            'watch': forecast.watch,
+            'sleep': forecast.sleep,
+            'phone': forecast.phone
+        }
+        for forecast in forecasts
+    ]
+
+    return jsonify(data)
+
+
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+
+@app.route('/show')
+@login_required
+def show():
+    return render_template('show.html')
 
 
 @app.route('/get_usage_stats')
@@ -266,7 +421,8 @@ def history():
                 'study': forecast.study,
                 'watch': forecast.watch,
                 'sleep': forecast.sleep,
-                'play_phone': forecast.phone
+                'play_phone': forecast.phone,
+                'video': forecast.video
             }
         }
         histories.append(history)
@@ -286,7 +442,8 @@ def home():
             'watch': forecast_records.watch,
             'sleep': forecast_records.sleep,
             'phone': forecast_records.phone,
-            'time': forecast_records.time.strftime("%Y-%m-%d %H:%M:%S")
+            'time': forecast_records.time.strftime("%Y-%m-%d %H:%M:%S"),
+            'video': forecast_records.video
         }
     else:
         forecast_data = None

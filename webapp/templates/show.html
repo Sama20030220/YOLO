@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>折线图表展示</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #FFA500;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .chart-container {
+            width: 80%;
+            height: 60%;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .controls select, .controls button {
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <select id="videoTagSelect">
+            <!-- 选项将在JavaScript中动态填充 -->
+        </select>
+        <button id="updateChart">更新图表</button>
+    </div>
+    <div class="chart-container">
+        <canvas id="recognitionChart"></canvas>
+    </div>
+    <script>        document.addEventListener('DOMContentLoaded', function() {
+    // 获取视频标签列表
+    console.log('hhh');
+    fetch('/api/video-tags')
+        .then(response => response.json())
+        .then(tags => {
+            const selectElement = document.getElementById('videoTagSelect');
+            tags.forEach(tag => {
+                const option = document.createElement('option');
+                option.value = tag;  // 使用整数值作为value
+                option.textContent = tag.toString();  // 转换为字符串显示
+                selectElement.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Error fetching tags:', error));
+});
+
+            // 更新图表的按钮点击事件
+            document.getElementById('updateChart').addEventListener('click', function()
+            {
+                const selectedTag = document.getElementById('videoTagSelect').value;
+                if (selectedTag === '0') return; // 如果选择的是默认值，则不执行任何操作
+
+                fetch(`/api/detection-counts?tag=${selectedTag}`)
+                    .then(response => response.json())
+                    .then(data =>
+                    {
+                        const ctx = document.getElementById('recognitionChart').getContext('2d');
+                        const chartData =
+                        {
+                            labels: data.map(item => item.time),
+                            datasets:
+                            [
+                                {
+                                    label: '聊天人数',
+                                    data: data.map(item => item.talk),
+                                    borderColor: 'rgb(75, 192, 192)',
+                                    fill: false,
+                                    tension: 0.1
+                                },
+                                {
+                                    label: '学习人数',
+                                    data: data.map(item => item.study),
+                                    borderColor: 'rgb(255, 99, 132)',
+                                    fill: false,
+                                    tension: 0.1
+                                },
+                                {
+                                    label: '观看视频人数',
+                                    data: data.map(item => item.watch),
+                                    borderColor: 'rgb(54, 162, 235)',
+                                    fill: false,
+                                    tension: 0.1
+                                },
+                                {
+                                    label: '睡觉人数',
+                                    data: data.map(item => item.sleep),
+                                    borderColor: 'rgb(255, 206, 86)',
+                                    fill: false,
+                                    tension: 0.1
+                                },
+                                {
+                                    label: '使用手机人数',
+                                    data: data.map(item => item.phone),
+                                    borderColor: 'rgb(153, 102, 255)',
+                                    fill: false,
+                                    tension: 0.1
+                                }
+                            ]
+                        };
+                        const chartConfig =
+                        {
+                            type: 'line',
+                            data: chartData,
+                            options:
+                            {
+                                scales:
+                                {
+                                    y:
+                                    {
+                                        beginAtZero: true
+                                    }
+                                },
+                                plugins:
+                                {
+                                    legend:
+                                    {
+                                        display: true
+                                    }
+                                }
+                            }
+                        };
+                        // 清除旧图表实例
+                        if (window.myLine)
+                        {
+                            window.myLine.destroy();
+                        }
+                        // 创建新图表实例
+                        window.myLine = new Chart(ctx, chartConfig);
+                    })
+                    .catch(error => console.error('Error fetching data:', error));
+            });
+    </script>
+</body>
+</html>
