@@ -5,14 +5,14 @@ import numpy as np
 import torch
 import os
 import bcrypt
-from sqlalchemy import create_engine, MetaData, Table, select, engine
+from sqlalchemy import and_, distinct
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import aliased
 from torchvision import transforms
 from ultralytics import YOLO
 from PIL import Image
 from werkzeug.utils import secure_filename
-from flask import Flask, request, jsonify, render_template, url_for, redirect, abort, current_app
+from flask import Flask, request, jsonify, render_template, url_for, redirect, current_app
 from flask_login import LoginManager, UserMixin, login_required, logout_user, login_user, current_user
 from sqlalchemy import func
 
@@ -408,9 +408,24 @@ def show():
 def get_usage_stats():
     # 创建Room表的别名
     roomalias = aliased(Room)
-    # 查询当前用户关联的班级的预测结果数量
-    total_forecasts = db.session.query(Forecast).join(roomalias, Forecast.number == roomalias.number).filter(
-        roomalias.number == current_user.classroom).count()
+    # 单独处理video为0的记录
+    zero_video_count = (
+        db.session.query(func.count(Forecast.id))
+        .join(roomalias, Forecast.number == roomalias.number)
+        .filter(and_(roomalias.number == current_user.classroom, Forecast.video == 0))
+        .scalar()
+    )
+    # 对于video不为0的记录，计数不同的video值
+    distinct_video_count = (
+        db.session.query(func.count(distinct(Forecast.video)))
+        .join(roomalias, Forecast.number == roomalias.number)
+        .filter(and_(
+            roomalias.number == current_user.classroom,
+            Forecast.video != 0
+        ))
+        .scalar()
+    )
+    total_forecasts = zero_video_count + distinct_video_count
     return jsonify({'total_forecasts': total_forecasts})
 
 
@@ -418,7 +433,7 @@ def get_usage_stats():
 @login_required
 def history():
     # 查询与当前用户关联的所有预测记录
-    forecasts = Forecast.query.filter_by(number=current_user.classroom).all()
+    forecasts = Forecast.query.filter_by(number=current_user.classroom, video=0).all()
     histories = []
     for forecast in forecasts:
         # 将每个预测记录转换为字典格式
@@ -431,7 +446,6 @@ def history():
                 'watch': forecast.watch,
                 'sleep': forecast.sleep,
                 'play_phone': forecast.phone,
-                'video': forecast.video
             }
         }
         histories.append(history)

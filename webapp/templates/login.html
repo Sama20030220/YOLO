@@ -57,23 +57,7 @@
             margin-top: 10px;
         }
 
-        .chart-container {
-        position: absolute;
-        bottom: 10px;
-        right: 10px;
-        width: 300px;
-        height: 200px;
-        background-color: white; /* 设置白色背景 */
-        border-radius: 10px; /* 圆角边框 */
-        padding: 10px; /* 内边距 */
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* 添加阴影以提升视觉效果 */
-        }
 
-        /* 调整画布以适应容器 */
-        .chart-container canvas {
-            width: 100% !important;
-            height: 100% !important;
-        }
         .airplane-container {
             position: absolute;
             top: 50px; /* 设置飞机位置 */
@@ -117,45 +101,7 @@
     <div class="airplane-container animation">
         <img src="{{ url_for('static', filename='plane.svg') }}" class="airplane" alt="Airplane">
     </div>
-    <div class="chart-container">
-        <canvas id="recognitionChart"></canvas>
-    </div>
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        fetch('/api/detection-counts')
-            .then(response => response.json())
-            .then(data => {
-                const ctx = document.getElementById('recognitionChart').getContext('2d');
-                const chartData = {
-                    labels: data.map(item => item.time),
-                    datasets: [{
-                        label: '图像识别次数',
-                        data: data.map(item => item.count),
-                        fill: false,
-                        borderColor: 'rgb(75, 192, 192)',
-                        tension: 0.1
-                    }]
-                };
-                const chartConfig = {
-                    type: 'line',
-                    data: chartData,
-                    options: {
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false // 可选：隐藏图例
-                            }
-                        }
-                    }
-                };
-                new Chart(ctx, chartConfig);
-            })
-            .catch(error => console.error('Error fetching data:', error));
-    });
 </script>
 </body>
 </html>
