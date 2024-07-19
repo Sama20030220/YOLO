@@ -23,8 +23,17 @@
             border-radius: 10px;
             padding: 20px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px; /* 在图表之间添加间距 */
         }
-
+        .chart-container1 {
+            width: 80%;
+            height: 60%;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px; /* 在图表之间添加间距 */
+        }
         .controls {
             display: flex;
             align-items: center; /* 使按钮和下拉菜单垂直居中 */
@@ -81,31 +90,30 @@
         <button id="updateChart">更新图表</button>
     </div>
     <div class="chart-container">
-        <canvas id="recognitionChart"></canvas>
+        <canvas id="recognitionChart" style="height: 100%;"></canvas> <!-- 调整折线图的高度以留出空间给面积图 -->
     </div>
-    <script>        document.addEventListener('DOMContentLoaded', function() {
-    // 获取视频标签列表
-    console.log('hhh');
-    fetch('/api/video-tags')
-        .then(response => response.json())
-        .then(tags => {
-            const selectElement = document.getElementById('videoTagSelect');
-            tags.forEach(tag => {
-                const option = document.createElement('option');
-                option.value = tag;  // 使用整数值作为value
-                option.textContent = tag.toString();  // 转换为字符串显示
-                selectElement.appendChild(option);
-            });
-        })
-        .catch(error => console.error('Error fetching tags:', error));
-});
-
-            // 更新图表的按钮点击事件
+    <div class="chart-container1">
+        <canvas id="areaChart" style="height: 100%; background-color: white;"></canvas> <!-- 新增的面积图canvas -->
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/video-tags')
+                .then(response => response.json())
+                .then(tags => {
+                    const selectElement = document.getElementById('videoTagSelect');
+                    tags.forEach(tag => {
+                        const option = document.createElement('option');
+                        option.value = tag;  // 使用整数值作为value
+                        option.textContent = `视频${tag.toString()}`;  // 转换为字符串显示
+                        selectElement.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error fetching tags:', error));
+        });
             document.getElementById('updateChart').addEventListener('click', function()
             {
                 const selectedTag = document.getElementById('videoTagSelect').value;
-                if (selectedTag === '0') return; // 如果选择的是默认值，则不执行任何操作
-
+                if (selectedTag === '0') return;
                 fetch(`/api/detection-counts?tag=${selectedTag}`)
                     .then(response => response.json())
                     .then(data =>
@@ -123,13 +131,13 @@
                                     fill: false,
                                     tension: 0.4
                                 },
-                                {
+                                /*{
                                     label: '学习人数',
                                     data: data.map(item => item.study),
                                     borderColor: 'rgb(255, 99, 132)',
                                     fill: false,
                                     tension: 0.4
-                                },
+                                },*/
                                 {
                                     label: '观看视频人数',
                                     data: data.map(item => item.watch),
@@ -153,11 +161,8 @@
                                 }
                             ]
                         };
-                         // 计算除study之外的总和
                         const otherActivitiesSum = data.map(item =>
                             item.talk + item.watch + item.sleep + item.phone);
-
-                        // 添加新的数据集
                         chartData.datasets.push({
                             label: '其他活动总人数',
                             data: otherActivitiesSum,
@@ -207,13 +212,82 @@
                                 }
                             }
                         };
+                        const areaCtx = document.getElementById('areaChart').getContext('2d');
+                        const areaChartConfig = {
+                            type: 'bar', // 或者改为 'bar' 如果你想使用柱状图
+                            data: {
+                                labels: data.map(item => item.time),
+                                datasets: [
+                                    {
+                                        label: '聊天人数',
+                                        data: data.map(item => item.talk),
+                                        borderColor: 'rgb(75, 192, 192)',
+                                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                                        fill: true,
+                                        tension: 0.4
+                                    },
+                                    {
+                                        label: '走神人数',
+                                        data: data.map(item => item.watch),
+                                        borderColor: 'rgb(54, 162, 235)',
+                                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                                        fill: true,
+                                        tension: 0.4
+                                    },
+                                    {
+                                        label: '睡觉人数',
+                                        data: data.map(item => item.sleep),
+                                        borderColor: 'rgb(255, 206, 86)',
+                                        backgroundColor: 'rgba(255, 206, 86, 0.6)',
+                                        fill: true,
+                                        tension: 0.4
+                                    },
+                                    {
+                                        label: '玩手机人数',
+                                        data: data.map(item => item.phone),
+                                        borderColor: 'rgb(153, 102, 255)',
+                                        backgroundColor: 'rgba(153, 102, 255, 0.6)',
+                                        fill: true,
+                                        tension: 0.4
+                                    },
+                                    {
+                                        label: '异常活动总人数',
+                                        data: otherActivitiesSum, // 使用之前计算的总和
+                                        borderColor: 'rgb(255, 159, 64)',
+                                        backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                                        fill: true,
+                                        tension: 0.4
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        stacked: true // 使柱状图堆叠
+                                        //beginAtZero: true
+                                    }
+                                },
+                                plugins: {
+                                    legend: {
+                                        display: true
+                                    }
+                                }
+                            }
+                        };
                         // 清除旧图表实例
                         if (window.myLine)
                         {
                             window.myLine.destroy();
                         }
+                        if(window.myAreaChart)
+                        {
+                            window.myAreaChart.destroy();
+                        }
                         // 创建新图表实例
                         window.myLine = new Chart(ctx, chartConfig);
+                        window.myAreaChart = new Chart(areaCtx, areaChartConfig);
                     })
                     .catch(error => console.error('Error fetching data:', error));
             });

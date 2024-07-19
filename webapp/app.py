@@ -370,7 +370,7 @@ def get_detection_counts():
         {
             'time': start_time + i * 5,
             'talk': forecast.talk,
-            'study': forecast.study,
+            #'study': forecast.study,
             'watch': forecast.watch,
             'sleep': forecast.sleep,
             'phone': forecast.phone
