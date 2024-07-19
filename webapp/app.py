@@ -364,18 +364,18 @@ def get_detection_counts():
 
     # 查询与当前用户关联且与给定tag匹配的所有预测记录
     forecasts = Forecast.query.filter_by(number=current_user.classroom).filter(Forecast.video == tag).all()
-
+    start_time = 0
     # 将查询结果转换为列表，其中每个元素都是一个字典，包含时间戳和各类别计数
     data = [
         {
-            'time': forecast.time.isoformat(),
+            'time': start_time + i * 5,
             'talk': forecast.talk,
             'study': forecast.study,
             'watch': forecast.watch,
             'sleep': forecast.sleep,
             'phone': forecast.phone
         }
-        for forecast in forecasts
+        for i, forecast in enumerate(forecasts)
     ]
 
     return jsonify(data)
