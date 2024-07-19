@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>教室表管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 20px;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        table th {
+            background-color: #f2f2f2;
+        }
+        .update-form {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #fff;
+            display: none;
+        }
+        .update-form.show {
+            display: block;
+        }
+        .btn {
+            cursor: pointer;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin-right: 5px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .back-btn {
+            background-color: #dc3545;
+        }
+        .back-btn:hover {
+            background-color: #bd2130;
+        }
+    </style>
+    <script>
+        function showUpdateForm(number, student, status) {
+            document.getElementById('update-form').classList.add('show');
+            document.getElementById('update-number').value = number;
+            document.getElementById('update-student').value = student;
+            document.getElementById('update-status').value = status;
+        }
+        function hideUpdateForm() {
+            document.getElementById('update-form').classList.remove('show');
+        }
+    </script>
+</head>
+<body>
+    <h1>教室表管理</h1>
+    <form action="{{ url_for('classrooms') }}" method="post">
+        <input type="hidden" name="form_type" value="add">
+        <label for="number">教室号:</label>
+        <input type="text" id="number" name="number" required>
+        <label for="student">学生数量:</label>
+        <input type="text" id="student" name="student" required>
+        <label for="status">状态 (Y/N):</label>
+        <input type="text" id="status" name="status" required>
+        <button type="submit" class="btn">添加</button>
+        <a href="{{ url_for('admin') }}" class="btn back-btn">返回</a>
+    </form>
+    <table>
+        <thead>
+            <tr>
+                <th>教室号</th>
+                <th>学生数量</th>
+                <th>状态</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for room in rooms %}
+            <tr>
+                <td>{{ room.number }}</td>
+                <td>{{ room.student }}</td>
+                <td>{{ room.status }}</td>
+                <td>
+                    <button type="button" class="btn" onclick="showUpdateForm('{{ room.number }}', '{{ room.student }}', '{{ room.status }}')">修改</button>
+                    <a href="{{ url_for('delete_room', number=room.number) }}" class="btn">删除</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div id="update-form" class="update-form">
+        <h2>修改教室数据</h2>
+        <form action="{{ url_for('classrooms') }}" method="post">
+            <input type="hidden" name="form_type" value="update">
+            <input type="hidden" id="update-number" name="number">
+            <label for="update-student">学生数量:</label>
+            <input type="text" id="update-student" name="student" required>
+            <label for="update-status">状态 (Y/N):</label>
+            <input type="text" id="update-status" name="status" required>
+            <button type="submit" class="btn">更新</button>
+            <button type="button" class="btn back-btn" onclick="window.history.back()">返回</button>
+        </form>
+    </div>
+</body>
+</html>

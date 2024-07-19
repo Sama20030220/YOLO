@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>用户表管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 20px;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        table th {
+            background-color: #f2f2f2;
+        }
+        .update-form {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #fff;
+            display: none;
+        }
+        .update-form.show {
+            display: block;
+        }
+        .btn {
+            cursor: pointer;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin-right: 5px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .back-btn {
+            background-color: #dc3545;
+        }
+        .back-btn:hover {
+            background-color: #bd2130;
+        }
+    </style>
+    <script>
+        function showUpdateForm(id, username, password, callnumber, mail, classroom) {
+            document.getElementById('update-form').classList.add('show');
+            document.getElementById('update-id').value = id;
+            document.getElementById('update-username').value = username;
+            document.getElementById('update-password').value = password;
+            document.getElementById('update-callnumber').value = callnumber;
+            document.getElementById('update-mail').value = mail;
+            document.getElementById('update-classroom').value = classroom;
+        }
+        function hideUpdateForm() {
+            document.getElementById('update-form').classList.remove('show');
+        }
+    </script>
+</head>
+<body>
+    <h1>用户表管理</h1>
+    <form action="{{ url_for('users') }}" method="post">
+        <input type="hidden" name="form_type" value="add">
+        <label for="username">用户名:</label>
+        <input type="text" id="username" name="username" required>
+        <label for="password">密码:</label>
+        <input type="text" id="password" name="password" required>
+        <label for="callnumber">电话号码:</label>
+        <input type="text" id="callnumber" name="callnumber" required>
+        <label for="mail">邮箱:</label>
+        <input type="text" id="mail" name="mail" required>
+        <label for="classroom">教室号:</label>
+        <input type="text" id="classroom" name="classroom" required>
+        <button type="submit" class="btn">添加</button>
+        <a href="{{ url_for('admin') }}" class="btn back-btn">返回</a>
+    </form>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>用户名</th>
+                <th>密码</th>
+                <th>电话号码</th>
+                <th>邮箱</th>
+                <th>教室号</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.password }}</td>
+                <td>{{ user.callnumber }}</td>
+                <td>{{ user.mail }}</td>
+                <td>{{ user.classroom }}</td>
+                <td>
+                    <button type="button" class="btn" onclick="showUpdateForm('{{ user.id }}', '{{ user.username }}', '{{ user.password }}', '{{ user.callnumber }}', '{{ user.mail }}', '{{ user.classroom }}')">修改</button>
+                    <a href="{{ url_for('delete_user', id=user.id) }}" class="btn">删除</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div id="update-form" class="update-form">
+        <h2>修改用户数据</h2>
+        <form action="{{ url_for('users') }}" method="post">
+            <input type="hidden" name="form_type" value="update">
+            <input type="hidden" id="update-id" name="id">
+            <label for="update-username">用户名:</label>
+            <input type="text" id="update-username" name="username" required>
+            <label for="update-password">密码:</label>
+            <input type="text" id="update-password" name="password" required>
+            <label for="update-callnumber">电话号码:</label>
+            <input type="text" id="update-callnumber" name="callnumber" required>
+            <label for="update-mail">邮箱:</label>
+            <input type="text" id="update-mail" name="mail" required>
+            <label for="update-classroom">教室号:</label>
+            <input type="text" id="update-classroom" name="classroom" required>
+            <button type="submit" class="btn">更新</button>
+            <button type="button" class="btn back-btn" onclick="window.history.back()">返回</button>
+        </form>
+    </div>
+</body>
+</html>

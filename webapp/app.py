@@ -301,6 +301,12 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 
+@app.route('/admin')
+@login_required
+def admin():
+    return render_template('admin.html')
+
+
 # 登录路由
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -308,10 +314,13 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         user = User.query.filter_by(username=username).first()
-        if user and check_password(user.password, password):
+        if user and check_password(user.password , password):
             login_user(user)
-            next_page = request.args.get('next')
-            return redirect(next_page or url_for('home'))  # 修改这里
+            if username == 'kitty' and password == '654321':
+                return redirect(url_for('admin'))
+            else:
+                next_page = request.args.get('next')
+                return redirect(next_page or url_for('home'))
         else:
             return render_template('login.html', error="Invalid username or password")
     return render_template('login.html')
@@ -480,6 +489,144 @@ def predict():
         }
 
         return jsonify(response_data)
+
+
+# 预测表路由和视图函数
+@app.route('/predictions', methods=['GET', 'POST'])
+@login_required
+def predictions():
+    if request.method == 'POST':
+        form_type = request.form.get('form_type')
+        if form_type == 'add':
+            number = request.form.get('number')
+            talk = request.form.get('talk')
+            study = request.form.get('study')
+            watch = request.form.get('watch')
+            sleep = request.form.get('sleep')
+            phone = request.form.get('phone')
+            time = request.form.get('time')
+            video = request.form.get('video')
+            new_forecast = Forecast(number=number, talk=talk, study=study, watch=watch, sleep=sleep, phone=phone,
+                                    time=time, video=video)
+            db.session.add(new_forecast)
+            db.session.commit()
+        elif form_type == 'update':
+            forecast_id = request.form.get('id')
+            number = request.form.get('number')
+            talk = request.form.get('talk')
+            study = request.form.get('study')
+            watch = request.form.get('watch')
+            sleep = request.form.get('sleep')
+            phone = request.form.get('phone')
+            time = request.form.get('time')
+            video = request.form.get('video')
+            forecast = Forecast.query.get(forecast_id)
+            if forecast:
+                forecast.number = number
+                forecast.talk = talk
+                forecast.study = study
+                forecast.watch = watch
+                forecast.sleep = sleep
+                forecast.phone = phone
+                forecast.video = video
+                forecast.time = time
+                db.session.commit()
+        return redirect(url_for('predictions'))
+    forecasts = Forecast.query.all()
+    print('999')
+    return render_template('predictions.html', forecasts=forecasts)
+
+
+@app.route('/delete_forecast/<int:id>')
+@login_required
+def delete_forecast(id):
+    forecast = Forecast.query.get(id)
+    if forecast:
+        db.session.delete(forecast)
+        db.session.commit()
+    return redirect(url_for('predictions'))
+
+
+# 教室表路由和视图函数
+@app.route('/classrooms', methods=['GET', 'POST'])
+@login_required
+def classrooms():
+    if request.method == 'POST':
+        if request.form.get('form_type') == 'add':
+            number = request.form.get('number')
+            student = request.form.get('student')
+            status = request.form.get('status')
+            if number and student and status:
+                room = Room(number=number, student=student, status=status)
+                db.session.add(room)
+                db.session.commit()
+        elif request.form.get('form_type') == 'update':
+            room_number = request.form.get('number')
+            new_student = request.form.get('student')
+            new_status = request.form.get('status')
+            room = Room.query.get(room_number)
+            if room and new_student and new_status:
+                room.student = new_student
+                room.status = new_status
+                db.session.commit()
+        return redirect(url_for('classrooms'))
+    rooms = Room.query.all()
+    return render_template('classrooms.html', rooms=rooms)
+
+
+@app.route('/delete_room/<string:number>')
+@login_required
+def delete_room(number):
+    room = Room.query.get(number)
+    if room:
+        db.session.delete(room)
+        db.session.commit()
+    return redirect(url_for('classrooms'))
+
+
+# 用户表路由和视图函数
+@app.route('/users', methods=['GET', 'POST'])
+@login_required
+def users():
+    if request.method == 'POST':
+        if request.form.get('form_type') == 'add':
+            username = request.form.get('username')
+            password = request.form.get('password')
+            callnumber = request.form.get('callnumber')
+            mail = request.form.get('mail')
+            classroom = request.form.get('classroom')
+            if username and password and callnumber and mail and classroom:
+                user = User(username=username, password=password, callnumber=callnumber, mail=mail, classroom=classroom)
+                db.session.add(user)
+                db.session.commit()
+        elif request.form.get('form_type') == 'update':
+            user_id = request.form.get('id')
+            new_username = request.form.get('username')
+            new_password = request.form.get('password')
+            new_callnumber = request.form.get('callnumber')
+            new_mail = request.form.get('mail')
+            new_classroom = request.form.get('classroom')
+            user = User.query.get(user_id)
+            if user and new_username and new_password and new_callnumber and new_mail and new_classroom:
+                user.username = new_username
+                user.password = new_password
+                user.callnumber = new_callnumber
+                user.mail = new_mail
+                user.classroom = new_classroom
+                db.session.commit()
+        return redirect(url_for('users'))
+    users = User.query.all()
+    return render_template('users.html', users=users)
+
+
+@app.route('/delete_user/<int:id>')
+@login_required
+def delete_user(id):
+    user = User.query.get(id)
+    if user:
+        db.session.delete(user)
+        db.session.commit()
+    return redirect(url_for('users'))
 
 
 if __name__ == "__main__":

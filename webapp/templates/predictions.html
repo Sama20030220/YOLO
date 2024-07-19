@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>预测表管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        table th {
+            background-color: #f2f2f2;
+        }
+        form {
+            margin-top: 20px;
+        }
+        form label {
+            display: inline-block;
+            width: 150px;
+            font-weight: bold;
+        }
+        form input[type=text], form input[type=number], form input[type=datetime-local] {
+            width: 250px;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        form input[type=submit] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        form input[type=submit]:hover {
+            background-color: #45a049;
+        }
+        #update-form {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
+        .hidden {
+            display: none;
+        }
+        .btn-group {
+            margin-top: 10px;
+        }
+        .btn-group button {
+            margin-right: 10px;
+            padding: 8px 16px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-group a {
+            text-decoration: none;
+            color: #333;
+            padding: 8px 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .btn-group a:hover {
+            background-color: #f2f2f2;
+        }
+        .back-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin-right: 5px;
+            transition: background-color 0.3s;
+        }
+        .back-btn:hover {
+            background-color: #bd2130;
+        }
+    </style>
+    <script>
+        function showUpdateForm(id, number, talk, study, watch, sleep, phone, time, video) {
+            document.getElementById('update-form').classList.remove('hidden');
+            document.getElementById('update-id').value = id;
+            document.getElementById('update-number').value = number;
+            document.getElementById('update-talk').value = talk;
+            document.getElementById('update-study').value = study;
+            document.getElementById('update-watch').value = watch;
+            document.getElementById('update-sleep').value = sleep;
+            document.getElementById('update-phone').value = phone;
+            document.getElementById('update-time').value = time;
+            document.getElementById('update-video').value = video;
+        }
+    </script>
+</head>
+<body>
+    <h1>预测表管理</h1>
+
+    <form action="{{ url_for('predictions') }}" method="post">
+        <input type="hidden" name="form_type" value="add">
+        <label for="number">教室号:</label>
+        <input type="text" id="number" name="number" required>
+        <br>
+        <label for="talk">聊天人数:</label>
+        <input type="number" id="talk" name="talk" required>
+        <br>
+        <label for="study">学习人数:</label>
+        <input type="number" id="study" name="study" required>
+        <br>
+        <label for="watch">走神人数:</label>
+        <input type="number" id="watch" name="watch" required>
+        <br>
+        <label for="sleep">睡觉人数:</label>
+        <input type="number" id="sleep" name="sleep" required>
+        <br>
+        <label for="phone">使用手机人数:</label>
+        <input type="number" id="phone" name="phone" required>
+        <br>
+        <label for="time">记录时间:</label>
+        <input type="datetime-local" id="time" name="time" required>
+        <br>
+        <label for="video">视频编号:</label>
+        <input type="number" id="video" name="video" required>
+        <br>
+        <input type="submit" value="添加">
+        <a href="{{ url_for('admin') }}" class="btn back-btn">返回</a>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>教室号</th>
+                <th>聊天人数</th>
+                <th>学习人数</th>
+                <th>走神人数</th>
+                <th>睡觉人数</th>
+                <th>使用手机人数</th>
+                <th>记录时间</th>
+                <th>视频编号</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for forecast in forecasts %}
+            <tr>
+                <td>{{ forecast.id }}</td>
+                <td>{{ forecast.number }}</td>
+                <td>{{ forecast.talk }}</td>
+                <td>{{ forecast.study }}</td>
+                <td>{{ forecast.watch }}</td>
+                <td>{{ forecast.sleep }}</td>
+                <td>{{ forecast.phone }}</td>
+                <td>{{ forecast.time }}</td>
+                <td>{{ forecast.video }}</td>
+                <td class="btn-group">
+                    <button onclick="showUpdateForm('{{ forecast.id }}', '{{ forecast.number }}', '{{ forecast.talk }}', '{{ forecast.study }}', '{{ forecast.watch }}', '{{ forecast.sleep }}', '{{ forecast.phone }}', '{{ forecast.time }}', '{{ forecast.video }}')">修改</button>
+                    <a href="{{ url_for('delete_forecast', id=forecast.id) }}">删除</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div id="update-form" class="hidden">
+        <h2>修改预测数据</h2>
+        <form action="{{ url_for('predictions') }}" method="post">
+            <input type="hidden" name="form_type" value="update">
+            <input type="hidden" id="update-id" name="id">
+            <label for="update-number">教室号:</label>
+            <input type="text" id="update-number" name="number" required>
+            <br>
+            <label for="update-talk">聊天人数:</label>
+            <input type="number" id="update-talk" name="talk" required>
+            <br>
+            <label for="update-study">学习人数:</label>
+            <input type="number" id="update-study" name="study" required>
+            <br>
+            <label for="update-watch">走神:</label>
+            <input type="number" id="update-watch" name="watch" required>
+            <br>
+            <label for="update-sleep">睡觉人数:</label>
+            <input type="number" id="update-sleep" name="sleep" required>
+            <br>
+            <label for="update-phone">使用手机人数:</label>
+            <input type="number" id="update-phone" name="phone" required>
+            <br>
+            <label for="update-time">记录时间:</label>
+            <input type="datetime-local" id="update-time" name="time" required>
+            <br>
+            <label for="update-video">视频编号:</label>
+            <input type="number" id="update-video" name="video" required>
+            <br>
+            <input type="submit" value="更新">
+            <button type="button" class="btn back-btn" onclick="window.history.back()">返回</button>
+        </form>
+    </div>
+</body>
+</html>
